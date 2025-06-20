@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reiknivél fyrir hjólapalla</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 1em; background: #f9f9f9; }
+    section.my-section { max-width: 800px; margin: 0 auto; padding: 1em; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { font-size: 1.8em; margin-bottom: 0.5em; color: #333; }
+
+    .radio-group { display: flex; align-items: center; gap: 1em; margin-bottom: 1em; }
+    .radio-group label { display: flex; align-items: center; gap: 0.4em; font-size: 0.9em; color: #555; }
+    .radio-group label.quick { margin-left: auto; }
+
+    input[type="radio"], input[type="checkbox"] { appearance: none; width: 1.2em; height: 1.2em; border: 2px solid #007bff; border-radius: 50%; position: relative; cursor: pointer; }
+    input[type="radio"]:checked::before, input[type="checkbox"]:checked::before { content: ''; width: 0.6em; height: 0.6em; background: #007bff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; }
+    .checkbox-group label { display: flex; align-items: center; gap: 0.4em; font-size: 0.9em; color: #555; }
+
+    hr { border: none; border-top: 1px solid #ccc; margin: 1em 0; }
+
+    .date-grid { display: grid; gap: 1em; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1em; }
+    .date-grid label { display: flex; flex-direction: column; font-size: 0.9em; color: #555; }
+    input[type="date"] { padding: 0.6em; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px; }
+
+    button { width: 100%; padding: 0.6em; font-size: 0.9em; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #0056b3; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: center; font-size: 0.85em; }
+    th { background: #f2f2f2; }
+
+    #rentSummary { margin-top: 1em; font-size: 1em; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <section class="my-section">
+    <h2>Reiknivél fyrir hjólapalla</h2>
+    <form id="scaffForm">
+      <div class="radio-group">
+        <label><input type="radio" name="type" value="model2"> Hjólapallur mjór</label>
+        <label><input type="radio" name="type" value="model3"> Hjólapallur breiður</label>
+        <label class="quick"><input type="radio" name="type" value="model1" required> Quicky pallur – Standhæð/vinnuhæð 2,0/4,0 mtr.</label>
+      </div>
+      <hr>
+      <div class="checkbox-group">
+        <label><input type="checkbox" name="heightOption" value="2.5"> Standhæð/vinnuhæð 2,5 mtr.</label>
+        <label><input type="checkbox" name="heightOption" value="3.5"> Standhæð/vinnuhæð 3,5 mtr.</label>
+        <label><input type="checkbox" name="heightOption" value="4.5"> Standhæð/vinnuhæð 4,5 mtr.</label>
+        <label><input type="checkbox" name="heightOption" value="5.5"> Standhæð/vinnuhæð 5,5 mtr.</label>
+        <label><input type="checkbox" name="heightOption" value="6.5"> Standhæð/vinnuhæð 6,5 mtr.</label>
+        <label><input type="checkbox" name="heightOption" value="7.5"> Standhæð/vinnuhæð 7,5 mtr.</label>
+        <label><input type="checkbox" name="heightOption" value="8.5"> Standhæð/vinnuhæð 8,5 mtr.</label>
+        <label><input type="checkbox" name="heightOption" value="9.5"> Standhæð/vinnuhæð 9,5 mtr.</label>
+        <label><input type="checkbox" name="heightOption" value="10.5"> Standhæð/vinnuhæð 10,5 mtr.</label>
+      </div>
+      <div class="date-grid">
+        <label>Upphafsdagur<input type="date" id="startDate" required></label>
+        <label>Skiladagur<input type="date" id="endDate" required></label>
+      </div>
+      <button type="submit" id="actionBtn">Reiknaðu magn</button>
+    </form>
+
+    <table id="resultTable" hidden>
+      <thead>
+        <tr>
+          <th>Vörunúmer</th>
+          <th>Heiti</th>
+          <th id="colHeader">Magn</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="rentSummary" hidden>
+      Samtals leiguverð: <span id="rentValue">0 kr.</span><br>
+      Lágmarks leigutími er 24 klst.
+    </div>
+  </section>
+  <script>
+    // Dummy data for rates - replace with your actual rates or a secure backend fetch
+    const dummyRates = {
+      '01-PAL-HP01-106': 1500, // Example daily rate for 'Álrammar B1 2,1M'
+      '01-PAL-HP01-107': 700,  // Example daily rate for 'Álrammar B5 1,05M'
+      '01-PAL-HP01-117': 2000, // Example daily rate for 'Gólfborð M/Opi PB25'
+      '01-PAL-HP01-108': 500,  // Example daily rate for 'Handrið H25'
+      '01-PAL-HP01-109': 300,  // Example daily rate for 'Skástífur D25'
+      '01-PAL-HP01-111': 100,  // Example daily rate for 'Hjól 200MM'
+      '01-PAL-HP01-115': 800   // Example daily rate for 'Álstífur Stillanlegar'
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      const isoDate = today.toISOString().split('T')[0];
+      document.getElementById('startDate').value = isoDate;
+      document.getElementById('endDate').value = isoDate;
+
+      const form = document.getElementById('scaffForm');
+      const actionBtn = document.getElementById('actionBtn');
+      const rentSummary = document.getElementById('rentSummary');
+
+      const updateButton = () => {
+        const anyChecked = document.querySelectorAll('input[name="heightOption"]:checked').length > 0;
+        actionBtn.textContent = anyChecked ? 'Reiknaðu magn' : 'Reikna leiguverð';
+        if (!anyChecked) rentSummary.hidden = true;
+      };
+      document.querySelectorAll('input[name="heightOption"]').forEach(cb => cb.addEventListener('change', updateButton));
+      updateButton();
+
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+
+        const selectedHeights = Array.from(document.querySelectorAll('input[name="heightOption"]:checked')).map(cb => cb.value);
+        if (selectedHeights.length === 0) {
+          alert('Vinsamlegast veldu standhæð til að reikna magn.');
+          return;
+        }
+
+        const table = document.getElementById('resultTable');
+        const tbody = table.querySelector('tbody');
+        tbody.innerHTML = '';
+        table.hidden = false;
+
+        document.getElementById('colHeader').textContent = `Magn við ${selectedHeights.join(', ')} m`;
+
+        let totalRentalAmount = 0; // Initialize total rental amount
+
+        // Calculate days for rental
+        const startDate = new Date(document.getElementById('startDate').value);
+        const endDate = new Date(document.getElementById('endDate').value);
+
+        // Check for valid dates
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            alert('Vinsamlegast veldu gildar dagsetningar.');
+            rentSummary.hidden = true;
+            table.hidden = true;
+            return;
+        }
+
+        const diffTime = Math.abs(endDate - startDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end day
+
+        const minDays = 1; // As per "24 klst" in original code, minimum 1 day
+
+        if (diffDays < minDays) {
+            alert(`Lágmarks leigutími er ${minDays} dagur.`); // Changed to singular "dagur"
+            rentSummary.hidden = true;
+            table.hidden = true;
+            return;
+        }
+
+        items.forEach(item => {
+          selectedHeights.forEach(h => {
+            const qty = item.vals[h] || 0;
+            if (qty > 0) {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${item.no}</td><td>${item.name}</td><td>${qty}</td>`;
+              tbody.appendChild(tr);
+
+              // Calculate cost for this item based on dummy data
+              const dailyRate = dummyRates[item.no] || 0; // Get daily rate, default to 0 if not found
+              totalRentalAmount += qty * dailyRate * diffDays;
+            }
+          });
+        });
+
+        // Display total rental price
+        document.getElementById('rentValue').textContent = `${totalRentalAmount.toLocaleString('is-IS')} kr.`;
+        rentSummary.hidden = false; // Show the total rental price section
+      });
+    });
+
+    const items = [
+      { no: '01-PAL-HP01-106', name: 'Álrammar B1 2,1M', vals: { '2.5': 2, '3.5': 4, '4.5': 4, '5.5': 6, '6.5': 6, '7.5': 8, '8.5': 8, '9.5': 10, '10.5': 10 } },
+      { no: '01-PAL-HP01-107', name: 'Álrammar B5 1,05M', vals: { '2.5': 2, '3.5': 0, '4.5': 2, '5.5': 0, '6.5': 2, '7.5': 0, '8.5': 2, '9.5': 0, '10.5': 2 } },
+      { no: '01-PAL-HP01-117', name: 'Gólfborð M/Opi PB25', vals: { '2.5': 1, '3.5': 1, '4.5': 2, '5.5': 2, '6.5': 3, '7.5': 3, '8.5': 4, '9.5': 5, '10.5': 5 } },
+      { no: '01-PAL-HP01-108', name: 'Handrið H25', vals: { '2.5': 4, '3.5': 4, '4.5': 6, '5.5': 6, '6.5': 8, '7.5': 8, '8.5': 10, '9.5': 12, '10.5': 14 } },
+      { no: '01-PAL-HP01-109', name: 'Skástífur D25', vals: { '2.5': 4, '3.5': 8, '4.5': 8, '5.5': 12, '6.5': 12, '7.5': 16, '8.5': 16, '9.5': 20, '10.5': 20 } },
+      { no: '01-PAL-HP01-111', name: 'Hjól 200MM', vals: { '2.5': 4, '3.5': 4, '4.5': 4, '5.5': 4, '6.5': 4, '7.5': 4, '8.5': 4, '9.5': 4, '10.5': 4 } },
+      { no: '01-PAL-HP01-115', name: 'Álstífur Stillanlegar', vals: { '4.5': 2, '5.5': 2, '6.5': 2, '7.5': 2, '8.5': 2, '9.5': 2, '10.5': 2 } }
+    ];
+  </script>
+</body>
+</html>
